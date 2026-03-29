@@ -98,8 +98,8 @@
         .details-content { padding: 0; background: white; border-top: 1px solid #e2e8f0; overflow-x: auto;}
         .info-row { padding: 12px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.85em; color: #475569; display: flex; justify-content: space-between; }
         
-        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-        th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82em; }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         th { background: white; color: #64748b; font-weight: 800; text-transform: uppercase; font-size: 0.85em;}
         tr:hover td { background: #f8fafc; }
         
@@ -107,6 +107,7 @@
         .tag-danger { background: var(--danger); }
         .tag-warning { background: var(--warning); }
         .tag-success { background: var(--success); }
+        .desc-texto { font-size: 0.85em; color: #64748b; font-weight: 600; font-style: italic; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
         footer { text-align: center; margin-top: 40px; padding: 20px; color: #94a3b8; font-size: 0.8em; font-weight: 600;}
     </style>
@@ -218,10 +219,9 @@
         <select id="filtroTipo" class="filter-input" onchange="renderizarResultados()">
             <option value="ALL">Todas as Inconsistências</option>
             <option value="NAO_LOCALIZADO">Não Localizados</option>
-            <option value="STATUS_INVALIDO">Recusados / Negados</option>
-            <option value="CANCELADO_ORIZON">Cancelados</option>
+            <option value="STATUS_INVALIDO">Recusados / Negados / Cancelados</option>
             <option value="DIVERGENCIA_DATA">Data Incorreta</option>
-            <option value="DIVERGENCIA_QTDE">Qtde Incorreta</option>
+            <option value="DIVERGENCIA_QTDE">Qtde Incorreta / Zerada</option>
             <option value="DIVERGENCIA_AUTH">Senha Incorreta</option>
             <option value="ALTO_CUSTO">Alto Custo (>= R$ 500)</option>
         </select>
@@ -359,9 +359,18 @@
             return padronizarTexto(texto).replace(/[^A-Z0-9]/g, "");
         }
 
+        // ==========================================
+        // 🛡️ MOTOR DE BUSCA EXATA
+        // ==========================================
         function buscarColuna(row, palavrasChave) {
             if (!row) return "";
             let cols = Object.keys(row);
+            // Prioridade 1: Match perfeito
+            for(let c of cols) {
+                let cLimpa = triturarAlfa(c);
+                for(let pk of palavrasChave) { if(cLimpa === pk) return row[c]; }
+            }
+            // Prioridade 2: Match parcial
             for(let c of cols) {
                 let cLimpa = triturarAlfa(c);
                 for(let pk of palavrasChave) { if(cLimpa.includes(pk)) return row[c]; }
@@ -452,8 +461,9 @@
                     let cod = buscarColuna(row, ['PROCEDIMENTO', 'CODIGO']);
                     let cart = buscarColuna(row, ['NUMERO', 'CARTAO']);
                     let status = padronizarTexto(buscarColuna(row, ['SITUACAO', 'STATUS']));
-                    let trans = padronizarTexto(buscarColuna(row, ['TIPODETRANSACAO', 'TRANSACAO'])); // Ajustado
-                    let descOrizon = padronizarTexto(buscarColuna(row, ['DESCRICAO'])); // NOVA COLUNA
+                    let trans = padronizarTexto(buscarColuna(row, ['TIPODETRANSACAO', 'TIPOTRANSACAO', 'TRANSACAO'])); 
+                    let descOrizon = padronizarTexto(buscarColuna(row, ['DESCRICAO', 'MOTIVO'])); 
+                    
                     let dataCrua = buscarColuna(row, ['DATA']); 
                     let qtde = parseFloat(buscarColuna(row, ['QUANTIDADE', 'QTDE'])) || 0;
                     let auth = padronizarTexto(buscarColuna(row, ['SENHAEXTERNA']));
@@ -491,6 +501,9 @@
                     let dataKorusRaw = buscarColuna(row, ['DATAENTRADA', 'DATAFATURA', 'DATA']);
                     let authKorus = padronizarTexto(buscarColuna(row, ['AUTORIZACAO']));
                     
+                    let qtdeKorusRaw = buscarColuna(row, ['QUANTIDADE', 'QTDE']);
+                    let qtdeKorusLinha = qtdeKorusRaw ? parseFloat(qtdeKorusRaw) || 1 : 1;
+
                     let valorRaw = buscarColuna(row, ['VALORCONVENIO', 'VALOR']);
                     let valorNum = extrairValor(valorRaw);
                     
@@ -514,7 +527,7 @@
                             qtdeK: 0, valorK: 0, valorRawK: valorRaw, idBuscado: idGerado 
                         });
                     }
-                    objAtend.exames.get(chaveExameUnico).qtdeK += 1;
+                    objAtend.exames.get(chaveExameUnico).qtdeK += qtdeKorusLinha;
                     objAtend.exames.get(chaveExameUnico).valorK += valorNum; 
                 });
 
@@ -558,31 +571,42 @@
                         let oData = "N/A", oDataCrua = "N/A", oQtde = "N/A", oAuth = "N/A", oStatus = "N/A", oTrans = "N/A", oDesc = "N/A";
 
                         if (!historico) {
-                            msgIncorreto.push("Não Localizado");
+                            msgIncorreto.push("Não Localizado na Orizon");
                             tipoInc.push('NAO_LOCALIZADO');
                         } else {
                             let tsKorus = dataParaTimestamp(exKorus.dataK);
                             
-                            // MOTOR DE PONTUAÇÃO BLINDADO
+                            // ==========================================
+                            // 🧠 NOVO MOTOR DE SCORE (BLINDADO)
+                            // ==========================================
                             let melhor = null;
                             let melhorScore = -999999;
 
                             historico.forEach(reg => {
                                 let score = 0;
-                                let strTrans = String(reg.trans).toUpperCase();
-                                let strStatus = String(reg.status).toUpperCase();
+                                let sTrans = String(reg.trans).toUpperCase();
+                                let sStatus = String(reg.status).toUpperCase();
                                 
-                                // Separação absoluta da lógica: Transação "Cancelamento" anula o status "Autorizada"
-                                let isCancelado = strTrans.includes('CANCEL');
-                                let isAutorizado = !isCancelado && (strStatus.includes('AUTORIZAD') || strStatus.includes('JUSTIFICAD') || strStatus.includes('PAG') || strStatus.includes('LIBERAD') || strStatus.includes('APROV'));
+                                let isCancelado = sTrans.includes('CANCEL') || sStatus.includes('CANCEL');
+                                let isNegado = sStatus.includes('NEGAD') || sStatus.includes('RECUSAD') || sStatus.includes('GLOSA');
+                                let isAutorizado = !isCancelado && !isNegado && (sStatus.includes('AUTORIZAD') || sStatus.includes('JUSTIFICAD') || sStatus.includes('PAG') || sStatus.includes('LIBERAD') || sStatus.includes('APROV'));
                                 
-                                if (isAutorizado) score += 10000;
-                                else if (!isCancelado) score += 5000; 
+                                // Pontuação Estratégica
+                                if (isAutorizado) {
+                                    score += 100000;
+                                } else if (isNegado) {
+                                    score += 10000; // Negada ganha da cancelada
+                                } else if (isCancelado) {
+                                    score -= 50000; // Afunda a Cancelada
+                                } else {
+                                    score += 5000; // Neutras
+                                }
                                 
-                                if (reg.qtde === exKorus.qtdeK) score += 1000;
+                                if (reg.qtde === exKorus.qtdeK && exKorus.qtdeK > 0) score += 5000;
+                                if (reg.qtde === 0) score -= 2000; // Foge de qtde 0 se houver outra linha
                                 
                                 let diffDias = Math.abs(reg.ts - tsKorus) / (1000 * 3600 * 24);
-                                score -= diffDias; 
+                                score -= (diffDias * 10); 
                                 
                                 if (score > melhorScore) {
                                     melhorScore = score;
@@ -594,44 +618,50 @@
                             oDataCrua = melhor.dataCrua || "-";
                             oQtde = melhor.qtde;
                             oAuth = melhor.auth || "-";
-                            oStatus = melhor.status;
-                            oTrans = melhor.trans;
+                            oStatus = melhor.status || "-";
+                            oTrans = melhor.trans || "-";
                             oDesc = melhor.descOrizon || "-";
 
-                            let strTransMelhor = String(melhor.trans).toUpperCase();
-                            let strStatusMelhor = String(melhor.status).toUpperCase();
+                            // ==========================================
+                            // 🚨 AVALIAÇÃO ACUMULATIVA DE ERROS (SEM PULAR NADA)
+                            // ==========================================
+                            let strTransM = String(melhor.trans).toUpperCase();
+                            let strStatusM = String(melhor.status).toUpperCase();
                             
-                            let ehCanceladoFinal = strTransMelhor.includes('CANCEL');
-                            let ehAutorizadoFinal = !ehCanceladoFinal && (strStatusMelhor.includes('AUTORIZAD') || strStatusMelhor.includes('JUSTIFICAD') || strStatusMelhor.includes('PAG') || strStatusMelhor.includes('LIBERAD') || strStatusMelhor.includes('APROV'));
+                            let ehCancelado = strTransM.includes('CANCEL') || strStatusM.includes('CANCEL');
+                            let ehNegado = strStatusM.includes('NEGAD') || strStatusM.includes('RECUSAD') || strStatusM.includes('GLOSA');
+                            let ehAutorizado = !ehCancelado && !ehNegado && (strStatusM.includes('AUTORIZAD') || strStatusM.includes('JUSTIFICAD') || strStatusM.includes('PAG') || strStatusM.includes('LIBERAD') || strStatusM.includes('APROV'));
                             
-                            let analiseContinua = true;
-                            
-                            if (ehCanceladoFinal) {
-                                msgIncorreto.push("Orizon Cancelou");
-                                tipoInc.push('CANCELADO_ORIZON');
-                                analiseContinua = false;
-                            } else if (!ehAutorizadoFinal) {
-                                msgIncorreto.push(`Recusado/Negado`);
+                            if (ehCancelado) {
+                                msgIncorreto.push("Cancelado na Orizon");
                                 tipoInc.push('STATUS_INVALIDO');
-                                analiseContinua = false;
-                            } 
+                            } else if (ehNegado) {
+                                msgIncorreto.push("Recusado/Negada");
+                                tipoInc.push('STATUS_INVALIDO');
+                            } else if (!ehAutorizado) {
+                                msgIncorreto.push("Status Pendente");
+                                tipoInc.push('STATUS_INVALIDO');
+                            }
                             
-                            if (analiseContinua) {
-                                if (melhor.ts !== tsKorus) { 
-                                    msgIncorreto.push(`Data K:${exKorus.dataK} vs O:${melhor.dataLimpa}`);
-                                    tipoInc.push('DIVERGENCIA_DATA');
-                                }
-                                if (exKorus.qtdeK !== melhor.qtde) {
-                                    msgIncorreto.push(`Qtde K:${exKorus.qtdeK} vs O:${melhor.qtde}`);
-                                    tipoInc.push('DIVERGENCIA_QTDE');
-                                }
+                            // Regra Absoluta de Quantidade: Não importa o status, se for Zero ou Diferente, aponta o erro!
+                            if (melhor.qtde === 0) {
+                                msgIncorreto.push(`Qtde Orizon Zerada`);
+                                tipoInc.push('DIVERGENCIA_QTDE');
+                            } else if (exKorus.qtdeK !== melhor.qtde) {
+                                msgIncorreto.push(`Qtde K:${exKorus.qtdeK} vs O:${melhor.qtde}`);
+                                tipoInc.push('DIVERGENCIA_QTDE');
+                            }
 
-                                let authK_limpa = triturarAlfa(exKorus.authK);
-                                let authO_limpa = triturarAlfa(melhor.auth);
-                                if (authK_limpa !== "" && authO_limpa !== "" && authK_limpa !== authO_limpa) {
-                                    msgIncorreto.push(`Senha K:${exKorus.authK} vs O:${melhor.auth}`);
-                                    tipoInc.push('DIVERGENCIA_AUTH');
-                                }
+                            if (melhor.ts !== tsKorus) { 
+                                msgIncorreto.push(`Data K:${exKorus.dataK} vs O:${melhor.dataLimpa}`);
+                                tipoInc.push('DIVERGENCIA_DATA');
+                            }
+
+                            let authK_limpa = triturarAlfa(exKorus.authK);
+                            let authO_limpa = triturarAlfa(melhor.auth);
+                            if (authK_limpa !== "" && authO_limpa !== "" && authK_limpa !== authO_limpa) {
+                                msgIncorreto.push(`Senha K:${exKorus.authK} vs O:${melhor.auth}`);
+                                tipoInc.push('DIVERGENCIA_AUTH');
                             }
                         }
 
@@ -655,7 +685,8 @@
                             }
                             atendimentosFinais.get(atendimento.atend).incorretos.push({ 
                                 exame: exKorus.exame, cod: exKorus.cod, dataK: exKorus.dataK, qtde: exKorus.qtdeK, valor: exKorus.valorK, authK: exKorus.authK,
-                                desc: statusGeral, qtdeIncorreta: exKorus.qtdeK, tipo: tipoInc.join(','), isErro: temErroReal
+                                desc: statusGeral, qtdeIncorreta: exKorus.qtdeK, tipo: tipoInc.join(','), isErro: temErroReal,
+                                statusOrizon: oStatus, transOrizon: oTrans, descOrizon: oDesc 
                             });
                         }
                     });
@@ -727,7 +758,6 @@
                         if(e.tipo.includes('DIVERGENCIA_QTDE')) dynStats.incQtde += e.qtdeIncorreta;
                         if(e.tipo.includes('DIVERGENCIA_AUTH')) dynStats.incAuth += e.qtdeIncorreta;
                         if(e.tipo.includes('STATUS_INVALIDO')) dynStats.incStatus += e.qtdeIncorreta;
-                        if(e.tipo.includes('CANCELADO_ORIZON')) dynStats.incCancel += e.qtdeIncorreta;
                     }
                 });
                 if(temErroNesteAtend) dynStats.atendInc++;
@@ -753,11 +783,13 @@
                 let detalhesHTML = d.incorretos.map(e => {
                     let corTag = 'tag-warning';
                     if (!e.isErro) corTag = 'tag-success';
-                    else if (e.tipo.includes('NAO_LOCALIZADO') || e.tipo.includes('STATUS_INVALIDO') || e.tipo.includes('CANCELADO_ORIZON')) corTag = 'tag-danger';
+                    else if (e.tipo.includes('NAO_LOCALIZADO') || e.tipo.includes('STATUS_INVALIDO')) corTag = 'tag-danger';
 
                     return `
                     <tr><td>${e.cod}</td><td>${e.exame}</td><td>${e.dataK}</td><td>${e.qtdeIncorreta}</td>
                     <td style="font-weight:bold; color: ${e.valor >= 500 ? 'var(--bradesco-dark)' : '#334155'};">${formatarMoeda(e.valor)}</td>
+                    <td><div style="font-weight:bold; color:var(--primary)">${e.statusOrizon || '-'}</div><div style="font-size:0.85em; color:#94a3b8;">${e.transOrizon || ''}</div></td>
+                    <td class="desc-texto" title="${e.descOrizon}">${e.descOrizon || '-'}</td>
                     <td><span class="tag ${corTag}">${e.desc}</span></td></tr>
                     `;
                 }).join('');
@@ -773,7 +805,7 @@
                                 <span><strong>Carteirinha do Paciente:</strong> ${d.cart}</span>
                             </div>
                             <table>
-                                <thead><tr><th>Cód. Exame</th><th>Descrição Korus</th><th>Data Korus</th><th>Qtde</th><th>Valor (R$)</th><th>Status Auditoria</th></tr></thead>
+                                <thead><tr><th>Cód. Exame</th><th>Descrição Korus</th><th>Data Korus</th><th>Qtde</th><th>Valor (R$)</th><th>Status Orizon</th><th>Desc. Orizon</th><th>Status Auditoria</th></tr></thead>
                                 <tbody>${detalhesHTML}</tbody>
                             </table>
                         </div>
@@ -792,10 +824,10 @@
                 chartInstance = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: ['Não Localizado', 'Data Incorreta', 'Qtde Incorreta', 'Senha Incorreta', 'Recusado/Negado', 'Cancelado'],
+                        labels: ['Não Localizado', 'Data Incorreta', 'Qtde Incorreta', 'Senha Incorreta', 'Recusado/Cancelado'],
                         datasets: [{
-                            data: [dynStats.incNaoLoc, dynStats.incData, dynStats.incQtde, dynStats.incAuth, dynStats.incStatus, dynStats.incCancel],
-                            backgroundColor: ['#cc092f', '#d97706', '#d97706', '#d97706', '#cc092f', '#cc092f'],
+                            data: [dynStats.incNaoLoc, dynStats.incData, dynStats.incQtde, dynStats.incAuth, dynStats.incStatus],
+                            backgroundColor: ['#cc092f', '#d97706', '#d97706', '#d97706', '#cc092f'],
                             borderWidth: 0,
                             borderRadius: { topLeft: 4, topRight: 4 }
                         }]
