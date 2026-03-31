@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Auditoria Bradesco | COUTINHO</title>
+    <title>Painel de Auditoria Bradesco | Auditoria & Tech</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -16,13 +16,13 @@
         
         body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #334155; margin: 0; padding: 25px; }
         
-        /* HEADER COUTINHO DISCRETO E CANTO */
+        /* HEADER DISCRETO E CANTO */
         header { position: relative; background: linear-gradient(135deg, var(--bradesco) 0%, var(--bradesco-dark) 100%); color: white; padding: 30px 25px 35px 25px; border-radius: 8px; margin-bottom: 25px; display: flex; flex-direction: column; gap: 25px; box-shadow: 0 4px 10px rgba(204, 9, 47, 0.2);}
         
-        /* ASSINATURA COUTINHO LIGHT NO CANTO SUPERIOR ESQUERDO */
-        .signature-top-left { position: absolute; top: 20px; left: 25px; text-align: left; opacity: 0.9;}
-        .signature-top-left h2 { margin: 0; font-size: 1.25em; font-weight: 300; letter-spacing: 1px; text-transform: uppercase; }
-        .signature-top-left p { margin: 2px 0 0 0; color: #f8dbdf; font-weight: 400; font-size: 0.7em; text-transform: uppercase; letter-spacing: 1px;}
+        /* ASSINATURA COM ESCUDO MAIOR E TEXTO ABAIXO */
+        .signature-top-left { position: absolute; top: 15px; left: 25px; display: flex; flex-direction: column; align-items: center; gap: 5px; opacity: 0.95;}
+        .signature-top-left p { margin: 0; color: #f8dbdf; font-weight: 600; font-size: 0.75em; text-transform: uppercase; letter-spacing: 1.5px;}
+        .img-escudo { height: 120px; width: auto; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.3)); }
 
         /* ÍCONE DE CONFIGURAÇÃO DISCRETO NO CANTO SUPERIOR DIREITO */
         .btn-icon { position: absolute; top: 18px; right: 25px; background: transparent; border: none; color: white; font-size: 1.5em; cursor: pointer; opacity: 0.6; transition: 0.3s; padding: 0; }
@@ -41,8 +41,8 @@
         .btn-warning { background: #f59e0b; color: white; border-color: #f59e0b; }
         .btn-warning:hover { background: #d97706; }
 
-        /* MODAL CONFIGURAÇÕES */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        /* MODAIS */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { background: white; width: 90%; max-width: 600px; border-radius: 12px; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); display: flex; flex-direction: column; gap: 20px; max-height: 85vh; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; }
         .modal-header h2 { margin: 0; color: var(--primary); font-weight: 800; font-size: 1.4em;}
@@ -116,7 +116,7 @@
 
     <header>
         <div class="signature-top-left">
-            <h2>COUTINHO</h2>
+            <img src="escudo.png" alt="Escudo Auditoria" class="img-escudo">
             <p>Auditoria & Tech</p>
         </div>
 
@@ -158,6 +158,21 @@
         </div>
     </div>
 
+    <div id="modalAlerta" class="modal-overlay">
+        <div class="modal-content" style="border-top: 4px solid var(--danger);">
+            <div class="modal-header">
+                <h2 style="color: var(--danger);">🚨 Risco de Glosa no Cadastro</h2>
+                <button class="close-btn" onclick="document.getElementById('modalAlerta').style.display='none'">×</button>
+            </div>
+            <div style="font-size: 0.95em; color: #475569; font-weight: 600;">
+                Os seguintes pacientes possuem menos de 1 ano de idade no Korus. Verifique as datas de nascimento na recepção:
+            </div>
+            <div class="depara-list-container" id="listaAlertasUI" style="max-height: 250px; background: #fef2f2; border-color: #fecaca;">
+                </div>
+            <button class="btn" style="align-self: flex-end; background: var(--bradesco); color: white; padding: 10px 30px; border:none;" onclick="document.getElementById('modalAlerta').style.display='none'">Ciente</button>
+        </div>
+    </div>
+
     <div class="controls">
         <div class="file-group">
             <span class="file-group-title">1. KORUS (Original)</span>
@@ -165,7 +180,7 @@
             <label for="fKorus" class="custom-file-label">Selecionar Arquivo</label>
         </div>
         <div class="file-group">
-            <span class="file-group-title">2. ORIZON (Original)</span>
+            <span class="file-group-title">2. OPERADORA (Original)</span>
             <input type="file" id="fOrizon" class="custom-file-input" accept=".csv">
             <label for="fOrizon" class="custom-file-label">Selecionar Arquivo</label>
         </div>
@@ -223,6 +238,7 @@
             <option value="DIVERGENCIA_DATA">Data Incorreta</option>
             <option value="DIVERGENCIA_QTDE">Qtde Incorreta / Zerada</option>
             <option value="DIVERGENCIA_AUTH">Senha Incorreta</option>
+            <option value="IDADE_INVALIDA">Idade Incorreta (Recém-Nascido)</option>
             <option value="ALTO_CUSTO">Alto Custo (>= R$ 500)</option>
         </select>
 
@@ -255,7 +271,6 @@
                 throw new Error("Violação de Licença: A execução do motor foi bloqueada pelo autor.");
             }
         })();
-        // ==========================================
 
         document.querySelectorAll('.custom-file-input').forEach(input => {
             input.addEventListener('change', function() {
@@ -359,18 +374,13 @@
             return padronizarTexto(texto).replace(/[^A-Z0-9]/g, "");
         }
 
-        // ==========================================
-        // 🛡️ MOTOR DE BUSCA EXATA
-        // ==========================================
         function buscarColuna(row, palavrasChave) {
             if (!row) return "";
             let cols = Object.keys(row);
-            // Prioridade 1: Match perfeito
             for(let c of cols) {
                 let cLimpa = triturarAlfa(c);
                 for(let pk of palavrasChave) { if(cLimpa === pk) return row[c]; }
             }
-            // Prioridade 2: Match parcial
             for(let c of cols) {
                 let cLimpa = triturarAlfa(c);
                 for(let pk of palavrasChave) { if(cLimpa.includes(pk)) return row[c]; }
@@ -403,7 +413,10 @@
 
         function extrairData(texto) {
             if (!texto) return "DATA_VAZIA";
-            let limpo = String(texto).replace(/[^0-9\/\-]/g, ''); 
+            
+            let textoSemHora = String(texto).trim().split(' ')[0];
+            
+            let limpo = textoSemHora.replace(/[^0-9\/\-]/g, ''); 
             if (/^\d{5}$/.test(limpo)) { 
                 let d = new Date(Math.round((parseFloat(limpo) - 25569) * 86400 * 1000));
                 return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
@@ -449,11 +462,13 @@
             numControleInterface = 1;
             idExportacao = 250;
             
+            let alertasRecemNascidos = new Set();
+
             document.getElementById('resultados-container').innerHTML = '<div style="text-align:center; padding:40px; font-weight:600; color:#64748b;">Processando Inteligência Financeira e Temporal...</div>';
             
             try {
                 let korus = await lerBaseDados(document.getElementById('fKorus'), 'KORUS');
-                let orizon = await lerBaseDados(document.getElementById('fOrizon'), 'ORIZON');
+                let orizon = await lerBaseDados(document.getElementById('fOrizon'), 'OPERADORA');
 
                 let orizonMap = new Map();
                 orizon.forEach(row => {
@@ -473,7 +488,7 @@
                     let dataLimpa = extrairData(dataCrua);
                     
                     if (!orizonMap.has(id)) orizonMap.set(id, []);
-                    orizonMap.get(id).push({ dataLimpa, dataCrua: dataCrua, ts: dataParaTimestamp(dataLimpa), status, trans, descOrizon, qtde, auth });
+                    orizonMap.get(id).push({ dataLimpa, dataCrua: dataCrua, ts: dataParaTimestamp(dataLimpa), status, trans, descOrizon, qtde, auth, rowOriginal: row });
                 });
 
                 let korusAgrupado = new Map();
@@ -488,6 +503,9 @@
                     let nomeRaw = padronizarTexto(buscarColuna(row, ['NOMEPACIENTE', 'PACIENTE'])); 
                     let atend = triturarAlfa(buscarColuna(row, ['NUMATENDIMENTO', 'ATENDIMENTO']));
                     
+                    let dataNascRaw = buscarColuna(row, ['DATANASC', 'NASCIMENTO']);
+                    let dataNascLimpa = extrairData(dataNascRaw);
+
                     if (!nomeRaw || !matriculaRaw || !atend) return;
 
                     listaAtendimentosPuros.add(atend);
@@ -515,7 +533,7 @@
                     if(dataKorusLimpa !== "DATA_VAZIA" && dataKorusLimpa !== "DATA_INVALIDA") datasUnicas.add(dataKorusLimpa);
 
                     if (!korusAgrupado.has(atend)) {
-                        korusAgrupado.set(atend, { atend: atend, unid: unidadeRaw, pac: nomeRaw, cart: padronizarTexto(matriculaRaw).replace(/\D/g, ""), exames: new Map() });
+                        korusAgrupado.set(atend, { atend: atend, unid: unidadeRaw, pac: nomeRaw, cart: padronizarTexto(matriculaRaw).replace(/\D/g, ""), dataNasc: dataNascLimpa, exames: new Map() });
                     }
                     
                     let objAtend = korusAgrupado.get(atend);
@@ -571,14 +589,11 @@
                         let oData = "N/A", oDataCrua = "N/A", oQtde = "N/A", oAuth = "N/A", oStatus = "N/A", oTrans = "N/A", oDesc = "N/A";
 
                         if (!historico) {
-                            msgIncorreto.push("Não Localizado na Orizon");
+                            msgIncorreto.push("Não Localizado na Operadora");
                             tipoInc.push('NAO_LOCALIZADO');
                         } else {
                             let tsKorus = dataParaTimestamp(exKorus.dataK);
                             
-                            // ==========================================
-                            // 🧠 NOVO MOTOR DE SCORE (BLINDADO)
-                            // ==========================================
                             let melhor = null;
                             let melhorScore = -999999;
 
@@ -586,24 +601,20 @@
                                 let score = 0;
                                 let sTrans = String(reg.trans).toUpperCase();
                                 let sStatus = String(reg.status).toUpperCase();
+                                let sDesc = String(reg.descOrizon).toUpperCase();
+                                let sFull = Object.values(reg.rowOriginal).join(" ").toUpperCase();
                                 
-                                let isCancelado = sTrans.includes('CANCEL') || sStatus.includes('CANCEL');
+                                let isCancelado = sTrans.includes('CANCEL') || sStatus.includes('CANCEL') || sDesc.includes('CANCEL') || sFull.includes('CANCELAMENTO');
                                 let isNegado = sStatus.includes('NEGAD') || sStatus.includes('RECUSAD') || sStatus.includes('GLOSA');
                                 let isAutorizado = !isCancelado && !isNegado && (sStatus.includes('AUTORIZAD') || sStatus.includes('JUSTIFICAD') || sStatus.includes('PAG') || sStatus.includes('LIBERAD') || sStatus.includes('APROV'));
                                 
-                                // Pontuação Estratégica
-                                if (isAutorizado) {
-                                    score += 100000;
-                                } else if (isNegado) {
-                                    score += 10000; // Negada ganha da cancelada
-                                } else if (isCancelado) {
-                                    score -= 50000; // Afunda a Cancelada
-                                } else {
-                                    score += 5000; // Neutras
-                                }
+                                if (isAutorizado) score += 100000;
+                                else if (isNegado) score += 10000; 
+                                else if (isCancelado) score -= 50000; 
+                                else score += 5000; 
                                 
                                 if (reg.qtde === exKorus.qtdeK && exKorus.qtdeK > 0) score += 5000;
-                                if (reg.qtde === 0) score -= 2000; // Foge de qtde 0 se houver outra linha
+                                if (reg.qtde === 0) score -= 2000; 
                                 
                                 let diffDias = Math.abs(reg.ts - tsKorus) / (1000 * 3600 * 24);
                                 score -= (diffDias * 10); 
@@ -622,18 +633,17 @@
                             oTrans = melhor.trans || "-";
                             oDesc = melhor.descOrizon || "-";
 
-                            // ==========================================
-                            // 🚨 AVALIAÇÃO ACUMULATIVA DE ERROS (SEM PULAR NADA)
-                            // ==========================================
                             let strTransM = String(melhor.trans).toUpperCase();
                             let strStatusM = String(melhor.status).toUpperCase();
+                            let strDescM = String(melhor.descOrizon).toUpperCase();
+                            let strFullM = Object.values(melhor.rowOriginal).join(" ").toUpperCase();
                             
-                            let ehCancelado = strTransM.includes('CANCEL') || strStatusM.includes('CANCEL');
+                            let ehCancelado = strTransM.includes('CANCEL') || strStatusM.includes('CANCEL') || strDescM.includes('CANCEL') || strFullM.includes('CANCELAMENTO');
                             let ehNegado = strStatusM.includes('NEGAD') || strStatusM.includes('RECUSAD') || strStatusM.includes('GLOSA');
                             let ehAutorizado = !ehCancelado && !ehNegado && (strStatusM.includes('AUTORIZAD') || strStatusM.includes('JUSTIFICAD') || strStatusM.includes('PAG') || strStatusM.includes('LIBERAD') || strStatusM.includes('APROV'));
                             
                             if (ehCancelado) {
-                                msgIncorreto.push("Cancelado na Orizon");
+                                msgIncorreto.push("Cancelado na Operadora");
                                 tipoInc.push('STATUS_INVALIDO');
                             } else if (ehNegado) {
                                 msgIncorreto.push("Recusado/Negada");
@@ -643,9 +653,8 @@
                                 tipoInc.push('STATUS_INVALIDO');
                             }
                             
-                            // Regra Absoluta de Quantidade: Não importa o status, se for Zero ou Diferente, aponta o erro!
                             if (melhor.qtde === 0) {
-                                msgIncorreto.push(`Qtde Orizon Zerada`);
+                                msgIncorreto.push(`Qtde Operadora Zerada`);
                                 tipoInc.push('DIVERGENCIA_QTDE');
                             } else if (exKorus.qtdeK !== melhor.qtde) {
                                 msgIncorreto.push(`Qtde K:${exKorus.qtdeK} vs O:${melhor.qtde}`);
@@ -665,13 +674,25 @@
                             }
                         }
 
+                        if (atendimento.dataNasc !== "DATA_VAZIA" && atendimento.dataNasc !== "DATA_INVALIDA") {
+                            let tsNasc = dataParaTimestamp(atendimento.dataNasc);
+                            let tsExame = dataParaTimestamp(exKorus.dataK);
+                            let idadeAnos = (tsExame - tsNasc) / (1000 * 3600 * 24 * 365.25);
+                            
+                            if (idadeAnos < 1) {
+                                msgIncorreto.push(`Aviso: Recém-Nascido`);
+                                tipoInc.push('IDADE_INVALIDA');
+                                alertasRecemNascidos.add(`Atend: ${atendimento.atend} | Paciente: ${atendimento.pac}`); 
+                            }
+                        }
+
                         let temErroReal = msgIncorreto.length > 0;
                         let statusGeral = temErroReal ? msgIncorreto.join(' | ') : "CONCILIADO - OK";
                         let conciliado = temErroReal ? "NÃO" : "OK";
 
                         relatorioCompleto.push({
                             idExport: idExportacao++,
-                            unid: atendimento.unid, atend: atendimento.atend, pac: atendimento.pac, cart: atendimento.cart,
+                            unid: atendimento.unid, atend: atendimento.atend, pac: atendimento.pac, cart: atendimento.cart, dataNasc: atendimento.dataNasc,
                             codK: exKorus.cod, exameK: exKorus.exame, dataK: exKorus.dataK, qtdeK: exKorus.qtdeK, valorK: exKorus.valorK, valorRawK: exKorus.valorRawK, authK: exKorus.authK,
                             dataO: oDataCrua, qtdeO: oQtde, authO: oAuth, statusO: oStatus, transO: oTrans, descO: oDesc,
                             conciliado: conciliado, motivo: statusGeral
@@ -680,7 +701,7 @@
                         if (temErroReal || isAltoCusto) {
                             if (!atendimentosFinais.has(atendimento.atend)) {
                                 atendimentosFinais.set(atendimento.atend, { 
-                                    idControle: numControleInterface++, unid: atendimento.unid, atend: atendimento.atend, pac: atendimento.pac, cart: atendimento.cart, incorretos: [] 
+                                    idControle: numControleInterface++, unid: atendimento.unid, atend: atendimento.atend, pac: atendimento.pac, cart: atendimento.cart, dataNasc: atendimento.dataNasc, incorretos: [] 
                                 });
                             }
                             atendimentosFinais.get(atendimento.atend).incorretos.push({ 
@@ -694,6 +715,16 @@
 
                 divergenciasEncontradas = Array.from(atendimentosFinais.values());
                 renderizarResultados(); 
+                
+                if(alertasRecemNascidos.size > 0) {
+                    let listaHTML = '';
+                    alertasRecemNascidos.forEach(a => {
+                        let textoLimpo = a.replace(/%/g, ' ').replace(/\s+/g, ' ');
+                        listaHTML += `<div class="depara-item" style="border-bottom-color:#fecaca; color:#991b1b; font-weight:600;">${textoLimpo}</div>`;
+                    });
+                    document.getElementById('listaAlertasUI').innerHTML = listaHTML;
+                    setTimeout(() => { document.getElementById('modalAlerta').style.display = 'flex'; }, 500);
+                }
 
             } catch (err) {
                 document.getElementById('resultados-container').innerHTML = `<div style="padding: 20px; background: #fee2e2; color: #b91c1c; border-radius: 8px; border: 1px solid #f87171;"><strong>ERRO CRÍTICO:</strong> ${err.message}</div>`;
@@ -743,7 +774,7 @@
                 }
             });
 
-            let dynStats = { incNaoLoc: 0, incData: 0, incQtde: 0, incStatus: 0, incAuth: 0, incCancel: 0, atendInc: 0, examesInc: 0, valorEmRisco: 0 };
+            let dynStats = { incNaoLoc: 0, incData: 0, incQtde: 0, incStatus: 0, incAuth: 0, incCancel: 0, incIdade: 0, atendInc: 0, examesInc: 0, valorEmRisco: 0 };
             
             filtrados.forEach(atend => {
                 let temErroNesteAtend = false;
@@ -758,6 +789,7 @@
                         if(e.tipo.includes('DIVERGENCIA_QTDE')) dynStats.incQtde += e.qtdeIncorreta;
                         if(e.tipo.includes('DIVERGENCIA_AUTH')) dynStats.incAuth += e.qtdeIncorreta;
                         if(e.tipo.includes('STATUS_INVALIDO')) dynStats.incStatus += e.qtdeIncorreta;
+                        if(e.tipo.includes('IDADE_INVALIDA')) dynStats.incIdade += e.qtdeIncorreta;
                     }
                 });
                 if(temErroNesteAtend) dynStats.atendInc++;
@@ -783,7 +815,7 @@
                 let detalhesHTML = d.incorretos.map(e => {
                     let corTag = 'tag-warning';
                     if (!e.isErro) corTag = 'tag-success';
-                    else if (e.tipo.includes('NAO_LOCALIZADO') || e.tipo.includes('STATUS_INVALIDO')) corTag = 'tag-danger';
+                    else if (e.tipo.includes('NAO_LOCALIZADO') || e.tipo.includes('STATUS_INVALIDO') || e.tipo.includes('IDADE_INVALIDA')) corTag = 'tag-danger';
 
                     return `
                     <tr><td>${e.cod}</td><td>${e.exame}</td><td>${e.dataK}</td><td>${e.qtdeIncorreta}</td>
@@ -797,15 +829,15 @@
                 container.innerHTML += `
                     <details>
                         <summary>
-                            <div class="summary-title">${d.unid} [Atend: ${d.atend}] | Paciente: ${d.pac}</div>
+                            <div class="summary-title">${d.unid} [Atend: ${d.atend}] | Paciente: ${d.pac.replace(/%/g, ' ')}</div>
                             <div style="color: #94a3b8; font-weight:bold;">[+] Expandir</div>
                         </summary>
                         <div class="details-content">
                             <div class="info-row">
-                                <span><strong>Carteirinha do Paciente:</strong> ${d.cart}</span>
+                                <span><strong>Carteirinha:</strong> ${d.cart} | <strong>Nascimento:</strong> ${d.dataNasc || '-'}</span>
                             </div>
                             <table>
-                                <thead><tr><th>Cód. Exame</th><th>Descrição Korus</th><th>Data Korus</th><th>Qtde</th><th>Valor (R$)</th><th>Status Orizon</th><th>Desc. Orizon</th><th>Status Auditoria</th></tr></thead>
+                                <thead><tr><th>Cód. Exame</th><th>Descrição Korus</th><th>Data Korus</th><th>Qtde</th><th>Valor (R$)</th><th>Status Operadora</th><th>Desc. Operadora</th><th>Status Auditoria</th></tr></thead>
                                 <tbody>${detalhesHTML}</tbody>
                             </table>
                         </div>
@@ -818,16 +850,16 @@
             let ctx = document.getElementById('errorChart').getContext('2d');
             
             if(chartInstance) {
-                chartInstance.data.datasets[0].data = [dynStats.incNaoLoc, dynStats.incData, dynStats.incQtde, dynStats.incAuth, dynStats.incStatus, dynStats.incCancel];
+                chartInstance.data.datasets[0].data = [dynStats.incNaoLoc, dynStats.incData, dynStats.incQtde, dynStats.incAuth, dynStats.incStatus, dynStats.incIdade];
                 chartInstance.update();
             } else {
                 chartInstance = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: ['Não Localizado', 'Data Incorreta', 'Qtde Incorreta', 'Senha Incorreta', 'Recusado/Cancelado'],
+                        labels: ['Não Localizado', 'Data Inc.', 'Qtde Inc.', 'Senha Inc.', 'Recus./Cancel.', 'Idade Inc.'],
                         datasets: [{
-                            data: [dynStats.incNaoLoc, dynStats.incData, dynStats.incQtde, dynStats.incAuth, dynStats.incStatus],
-                            backgroundColor: ['#cc092f', '#d97706', '#d97706', '#d97706', '#cc092f'],
+                            data: [dynStats.incNaoLoc, dynStats.incData, dynStats.incQtde, dynStats.incAuth, dynStats.incStatus, dynStats.incIdade],
+                            backgroundColor: ['#cc092f', '#d97706', '#d97706', '#d97706', '#cc092f', '#8b5cf6'],
                             borderWidth: 0,
                             borderRadius: { topLeft: 4, topRight: 4 }
                         }]
@@ -872,10 +904,10 @@
         function gerarCSV(dados, nomeArquivo) {
             if(dados.length === 0) return alert("Nenhum dado processado para exportar.");
             
-            let csv = "ID Controle;Unidade;Atendimento;Nome Paciente;Carteirinha;Cod Exame;Exame Korus;Data Korus;Qtde Korus;Valor Bruto Korus (Debug);Valor Final (R$);Auth Korus;Data Orizon;Qtde Orizon;Auth Orizon;Status Orizon;Transacao Orizon;Descricao Orizon;Conciliado;Motivo Inconsistencia\n";
+            let csv = "ID Controle;Unidade;Atendimento;Nome Paciente;Data Nasc.;Carteirinha;Cod Exame;Exame Korus;Data Korus;Qtde Korus;Valor Bruto Korus (Debug);Valor Final (R$);Auth Korus;Data Operadora;Qtde Operadora;Auth Operadora;Status Operadora;Transacao Operadora;Descricao Operadora;Conciliado;Motivo Inconsistencia\n";
             
             dados.forEach(r => {
-                csv += `${r.idExport};${r.unid};${r.atend};${r.pac};${forcarTexto(r.cart)};${r.codK};${r.exameK};${r.dataK};${r.qtdeK};${forcarTexto(r.valorRawK)};${r.valorK.toFixed(2).replace('.',',')};${forcarTexto(r.authK)};${r.dataO};${r.qtdeO};${forcarTexto(r.authO)};${r.statusO};${forcarTexto(r.transO)};${forcarTexto(r.descO)};${r.conciliado};${r.motivo}\n`;
+                csv += `${r.idExport};${r.unid};${r.atend};${r.pac.replace(/%/g, ' ')};${r.dataNasc};${forcarTexto(r.cart)};${r.codK};${r.exameK};${r.dataK};${r.qtdeK};${forcarTexto(r.valorRawK)};${r.valorK.toFixed(2).replace('.',',')};${forcarTexto(r.authK)};${r.dataO};${r.qtdeO};${forcarTexto(r.authO)};${r.statusO};${forcarTexto(r.transO)};${forcarTexto(r.descO)};${r.conciliado};${r.motivo}\n`;
             });
             
             let link = document.createElement("a");
