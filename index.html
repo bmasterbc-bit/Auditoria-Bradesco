@@ -190,6 +190,7 @@
             <div style="font-size: 0.95em; color: #475569; line-height: 1.6;">
                 <p style="margin-top:0;"><strong>O que há de novo nesta versão:</strong></p>
                 <ul style="padding-left: 20px; margin-bottom: 20px;">
+                    <li><strong>Performance Extrema:</strong> O gargalo de leitura foi removido. Arquivos gigantes não travam mais o navegador.</li>
                     <li><strong>Múltiplos Arquivos (+):</strong> Adicione várias planilhas em lote clicando no "+" sem apagar as seleções anteriores.</li>
                     <li><strong>Trava de Senhas:</strong> Alertas novos para "Senha Inventada" e "Múltiplas Senhas" faturadas na mesma guia.</li>
                     <li><strong>Status Kanban (Memória Blindada):</strong> Marque guias como <i>Ausente</i>, <i>Pendente</i> ou <i>Corrigida</i>. O robô lembrará sua escolha automaticamente nas próximas varreduras.</li>
@@ -344,7 +345,7 @@
         // ==========================================
         // 🔒 TRAVA DE DOMÍNIO E CONTROLE DE VERSÃO
         // ==========================================
-        const VERSAO_SISTEMA = "1.5"; // MUDE ISSO PARA DISPARAR O POP-UP NOVAMENTE NO FUTURO
+        const VERSAO_SISTEMA = "1.5"; 
 
         (function() {
             const dominiosPermitidos = ["brcoutinho-coder.github.io", "localhost", "127.0.0.1", ""];
@@ -361,7 +362,6 @@
             }
         })();
 
-        // LÓGICA DO POP-UP DE ATUALIZAÇÃO (RELEASE NOTES)
         function fecharModalUpdate() {
             localStorage.setItem('coutinhoAppVersion', VERSAO_SISTEMA);
             document.getElementById('modalUpdate').style.display = 'none';
@@ -415,7 +415,6 @@
         let chartInstance = null;
 
         window.onload = () => {
-            // Checa versão para mostrar pop-up de novidades
             let savedVersion = localStorage.getItem('coutinhoAppVersion');
             if (savedVersion !== VERSAO_SISTEMA) {
                 document.getElementById('modalUpdate').style.display = 'flex';
@@ -426,9 +425,6 @@
             atualizarUIConfig();
         };
 
-        // ==========================================
-        // 💾 MOTOR DE GRAVAÇÃO BLINDADA DO STATUS KANBAN
-        // ==========================================
         function alterarStatusAuditoria(chaveAtendimentoSegura, elementoSelect) {
             let dbFresco = JSON.parse(localStorage.getItem('statusAuditoriaCoutinho') || "{}");
             dbFresco[chaveAtendimentoSegura] = elementoSelect.value;
@@ -573,7 +569,7 @@
         }
 
         // ==========================================
-        // 🪓 GUILHOTINA DE CABEÇALHO PARA KORUS/ORIZON
+        // 🪓 GUILHOTINA DE CABEÇALHO + DELIMITADOR
         // ==========================================
         async function lerMultiplasBases(filesArray, nome) {
             if (!filesArray || filesArray.length === 0) throw new Error(`Nenhum arquivo válido de ${nome} foi selecionado.`);
@@ -586,6 +582,7 @@
                             header: true, 
                             skipEmptyLines: true, 
                             encoding: "ISO-8859-1",
+                            delimiter: ";", // TRAVA DE FATIAMENTO ATIVADA AQUI
                             beforeFirstChunk: function(chunk) {
                                 let lines = chunk.split(/\r\n|\n|\r/);
                                 let headerIndex = 0;
@@ -977,6 +974,9 @@
             }
         }
 
+        // ==========================================
+        // 🚀 OTIMIZAÇÃO: RENDERIZAÇÃO EM LOTE NA TELA
+        // ==========================================
         function renderizarResultados() {
             let container = document.getElementById('resultados-container');
             
@@ -1074,11 +1074,13 @@
             
             desenharGrafico(dynStats);
 
-            container.innerHTML = '';
             if(filtrados.length === 0) { 
                 container.innerHTML = '<div style="text-align:center; padding: 40px; color:#64748b; font-weight:600;">Nenhuma inconsistência encontrada com os filtros selecionados.</div>'; 
                 return; 
             }
+
+            // CARREGA TUDO NA MEMÓRIA PRIMEIRO PARA NÃO TRAVAR O CHROME
+            let htmlSaida = "";
 
             filtrados.forEach(d => {
                 let chaveUnicaStatusSegura = triturarAlfa(d.unid) + "_" + triturarAlfa(d.atend);
@@ -1107,7 +1109,7 @@
                     `;
                 }).join('');
 
-                container.innerHTML += `
+                htmlSaida += `
                     <details>
                         <summary>
                             <div class="summary-title">
@@ -1130,6 +1132,9 @@
                     </details>
                 `;
             });
+            
+            // Joga tudo na tela num pulo só (Isso que parou o travamento)
+            container.innerHTML = htmlSaida;
         }
 
         function desenharGrafico(dynStats) {
